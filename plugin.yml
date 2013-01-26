@@ -1,0 +1,21 @@
+name: MSTR_Regions
+main: ca.strendin.MSTR_Regions.MSTR_Regions
+version: 1.0
+authors:
+  - Mark Strendin
+description: Basic region controls
+
+permissions:
+  MSTR_Regions.create:
+    description: Ability to create regions
+    default: op
+  MSTR_Regions.ignoreregions:
+    description: Ignore region limitations
+    default: op
+commands:
+  msregiontool:
+    aliases: [regiontool,rt]
+    description: Gives the player a region tool
+  msregion:
+    aliases: [msregions, msr]
+    description: Manages regions            
