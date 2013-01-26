@@ -28,6 +28,8 @@ public class MSTR_RegionCommand implements CommandExecutor {
                         HandleListCommand(requestplayer,args);                    
                     } else if (param.toLowerCase().equals("remove")) {
                         HandleRemoveCommand(requestplayer,args);               
+                    } else if (param.toLowerCase().equals("whitelist")) {
+                    	HandleWhiteListCommand(requestplayer,args);
                     } else if (param.toLowerCase().equals("load")) {
                         HandleLoadCommand(requestplayer,args);
                     } else if (param.toLowerCase().equals("save")) {
@@ -44,6 +46,7 @@ public class MSTR_RegionCommand implements CommandExecutor {
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    remove <region name>");
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    list"); 
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    setowner <region name> <new owner name>");
+                    MSTR_Comms.sendPlayerInfo(requestplayer, "    whitelist <region name> add|remove <player name>");                    
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    flag <region name> <flag>");
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    flags: blockprotect, explosionprotect, playerentry, ");
                     MSTR_Comms.sendPlayerInfo(requestplayer, "           enemyspawn, announce, announcetext, ");
@@ -54,6 +57,35 @@ public class MSTR_RegionCommand implements CommandExecutor {
         	MSTR_Comms.sendConsoleOnly("This command is designed for players only, sorry");
         }
         return true;
+    }
+    
+    private void HandleWhiteListCommand(Player player, String[] args) {
+    	if (args.length > 3) {
+    		String specifiedPlayerName = args[3];
+    		String subCommand = args[2];
+            CuboidRegion specifiedRegion = CuboidRegionHandler.getRegionByName(args[1]);
+    		
+            if (specifiedRegion != null) {
+            	if (subCommand.toLowerCase().equals("add")) {
+            		specifiedRegion.addToWhiteList(specifiedPlayerName);
+            		CuboidRegionHandler.saveAllRegions();
+            		MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayerName+"\" added to whitelist for region \""+specifiedRegion.getName()+"\"");
+        		} else if (subCommand.toLowerCase().equals("remove")) {
+        			specifiedRegion.removeFromWhiteList(specifiedPlayerName);
+        			CuboidRegionHandler.saveAllRegions();
+        			MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayerName+"\" removed from whitelist for region \""+specifiedRegion.getName()+"\"");
+        		} else {
+            		MSTR_Comms.sendPlayerError(player, "Usage: /msregion whitelist <region> add <playername>");
+            		MSTR_Comms.sendPlayerError(player, "       /msregion whitelist <region> remove <playername>");    			
+        		}            	
+            } else {
+            	MSTR_Comms.sendPlayerError(player, "Region \""+args[1]+"\"not found!");
+            }
+    		
+    	} else {    		
+    		MSTR_Comms.sendPlayerError(player, "Usage: /msregion whitelist <region> add <playername>");
+    		MSTR_Comms.sendPlayerError(player, "       /msregion whitelist <region> remove <playername>");
+    	}
     }
     
     private void HandleSaveCommand(Player player, String[] args) {

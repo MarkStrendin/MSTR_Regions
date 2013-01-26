@@ -2,7 +2,6 @@ package ca.strendin.MSTR_Regions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
@@ -17,18 +16,19 @@ public class CuboidRegion implements Serializable {
     private boolean bCanEnemiesSpawnHere;
     private boolean bCanPlayersEnter;
     private boolean bAnnounceOnEnter;
-    private boolean bProtectChests;    
+    private boolean bAllowChestAccess;    
     private int iHighX;
     private int iHighY;
     private int iHighZ;
     private int iLowX;
     private int iLowY;
     private int iLowZ;
-    private String sOwner;
+    private String sOwner; // Owner can change
+    private String sCreator; // Creator cannot change
     private String sName;
     private String sWorld;
     private String sAnnounceThisOnEnter;
-    private List<String> whiteList;
+    private ArrayList<String> whiteList;
     
     
     // If the location is in a region, returns that region. Otherwise returns null.
@@ -62,6 +62,10 @@ public class CuboidRegion implements Serializable {
         return sOwner;
     }
     
+    public String getCreator() {
+    	return sCreator;
+    }
+    
     public String getWorld() {
         return sWorld;
     }
@@ -79,8 +83,66 @@ public class CuboidRegion implements Serializable {
     }
     
     public boolean canPlayersOpenChests() {
-    	return bProtectChests;
+    	return bAllowChestAccess;
     }
+    
+    public boolean isOnWhiteList(String playerName) {
+    	if (whiteList != null) {
+	    	for (String thisName : whiteList) {
+	    		if (thisName.contentEquals(playerName)) {
+	    			return true;
+	    		}
+	    	}
+	    	
+	    	// Owner and Creator are always on the whitelist
+	    	if ((sOwner.contentEquals(playerName)) | (sCreator.contentEquals(playerName))) {
+	    		return true;
+	    	}    	
+	    	
+    	}
+    	
+    	return false;
+    }
+    
+    public String getWhiteList() {
+    	if (whiteList != null) {
+	    	String returnMe = "";
+	    	    	
+	    	for (String thisName : whiteList) {
+	    		returnMe = returnMe + thisName + " ";
+	    	}    	
+	    	
+	    	return returnMe.trim();
+    	} else {
+    		return null;
+    	}
+    }
+    
+    public void removeFromWhiteList(String playerName) {
+    	if (whiteList == null) {
+    		whiteList = new ArrayList<String>();
+    	}
+    	if (whiteList.contains(playerName)) {
+    		whiteList.remove(playerName);
+    	}
+    }
+    
+    public void addToWhiteList(String playerName) {
+    	if (whiteList == null) {
+    		whiteList = new ArrayList<String>();
+    	}
+    	if (!whiteList.contains(playerName)) {
+    		whiteList.add(playerName);
+    	}
+    }
+    
+    public int getWhitelistCount() {
+    	if (whiteList == null) {
+    		return 0;
+    	} else {
+    		return whiteList.size();
+    	}    	
+    }    
     
     public boolean canBreakBlocks() {
     	return bCanBreakBlocks;
@@ -115,7 +177,7 @@ public class CuboidRegion implements Serializable {
     }
     
     public void setCanPlayersOpenChests(boolean value) {
-    	bProtectChests = value;    	
+    	bAllowChestAccess = value;    	
     }
     
     public void setAnnounceText(String value) {
@@ -157,10 +219,9 @@ public class CuboidRegion implements Serializable {
     public CuboidRegion(String regionName, Player owner, CuboidPreRegion preRegion) {
         // For coordinates, make sure that the high and low values get sorted out properly
         sName = regionName;
-        sOwner = owner.getDisplayName();
-        sWorld = preRegion.loc1.getWorld().getName();
-        
-        
+        sOwner = owner.getName();
+        sCreator = owner.getName();
+        sWorld = preRegion.loc1.getWorld().getName();        
         
         // Defaults     
         bPaintBrush_CanApplyPaint = false;
@@ -170,8 +231,9 @@ public class CuboidRegion implements Serializable {
         bCanEnemiesSpawnHere = true;
         bCanPlayersEnter = true;
         bAnnounceOnEnter = false; 
-        bProtectChests = false;
+        bAllowChestAccess = true;
         sAnnounceThisOnEnter = null;
+        whiteList = new ArrayList<String>();
         
         // X
         if (preRegion.loc1.getBlockX() > preRegion.loc2.getBlockX()) {

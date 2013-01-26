@@ -1,6 +1,5 @@
 package ca.strendin.MSTR_Regions;
 
-import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -92,40 +91,19 @@ public class MSTR_PlayerListener implements Listener {
 	}
 	
 	@EventHandler
-    public void onPlayerMoveEvent(PlayerMoveEvent event) {    	
-    	CuboidRegion thisRegion = CuboidRegionHandler.getRegionHere(event.getTo());
-    	if (thisRegion != null) {
-    		Player player = event.getPlayer();
-    		
- 		
-    		// For announcing upon entry
-    		
-    		// Check to see if the player is just entering the region, so we don't spam them with messages while they
-    		// are in the region
-    		if (CuboidRegionHandler.getRegionHere(event.getFrom()) == null) {
-    		
-				if (thisRegion.canAnnounceOnEnter()) {
-					MSTR_Comms.sendPlayerInfo(player, thisRegion.getAnnounceText());
-				}
-    		}
-    		
-    		// For checking to see if they are allowed in the region
-    		
-    		// Check to see if they are the owner of the region
-    		
-    		if (!thisRegion.canPlayersEnter()) {
-				if (!thisRegion.getOwner().toLowerCase().contentEquals((player.getName().toLowerCase()))) {
-					if (CuboidRegionHandler.getRegionHere(event.getFrom()) == thisRegion) {
-						player.teleport(player.getLocation().getWorld().getSpawnLocation());
-					} else {
-						player.teleport(event.getFrom());
-					}
-					MSTR_Comms.sendPlayerError(player, "Sorry, you are not allowed in the region \""+thisRegion.getName()+"\"");
-				}
-    		}    		
-    	}
-    }
+    public void onPlayerMoveEvent(PlayerMoveEvent event) {
+		Player player = event.getPlayer();
+		if (!CuboidRegionHandler.canMoveHere(player, event.getTo())) {
+			if (!CuboidRegionHandler.canMoveHere(player, event.getFrom())) {
+				player.teleport(player.getLocation().getWorld().getSpawnLocation());
+			} else {
+				player.teleport(event.getFrom());
+			}
+			MSTR_Comms.sendPlayerError(player, "Sorry, you are not allowed in this region");
+		}
+	}
     
+	
     @EventHandler        
     public void onCreatureSpawnEvent(CreatureSpawnEvent event) {
         if (CuboidRegionHandler.getRegionHere(event.getLocation()) != null) {
