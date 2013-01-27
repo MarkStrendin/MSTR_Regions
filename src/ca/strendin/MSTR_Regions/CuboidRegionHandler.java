@@ -189,13 +189,13 @@ public class CuboidRegionHandler {
         }
  
         if (foundRegion != null) {
-            if (removedRegion = true) {
-                regions.remove(foundRegion);
-                File thisRegionFile = new File(regionDir,foundRegion.getName() + ".msregion");
-                if (thisRegionFile.exists()) {
-                    thisRegionFile.delete();
-                }
+            
+            regions.remove(foundRegion);
+            File thisRegionFile = new File(regionDir,foundRegion.getName() + ".msregion");
+            if (thisRegionFile.exists()) {
+                thisRegionFile.delete();
             }
+            
         }
         
         if (removedRegion) {            

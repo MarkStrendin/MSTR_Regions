@@ -9,6 +9,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -106,9 +107,21 @@ public class MSTR_PlayerListener implements Listener {
 	
     @EventHandler        
     public void onCreatureSpawnEvent(CreatureSpawnEvent event) {
-        if (CuboidRegionHandler.getRegionHere(event.getLocation()) != null) {
+    	if (CuboidRegionHandler.getRegionHere(event.getLocation()) != null) {
         	if (isEntityHostile(event.getEntityType())) {
-        		event.setCancelled(true);        		
+        		
+        		/*
+        		 * Only cancel the event if its a natural mob spawn - allow spawns from eggs/dispensors/etc
+        		 */
+        		if (
+        				(event.getSpawnReason() == SpawnReason.CHUNK_GEN) ||
+        				(event.getSpawnReason() == SpawnReason.NATURAL) ||
+        				(event.getSpawnReason() == SpawnReason.VILLAGE_INVASION)
+        				) {
+        			event.setCancelled(true);
+        			
+        		}
+        		        		
         	}        		
         }
     }
