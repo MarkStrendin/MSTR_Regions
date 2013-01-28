@@ -1,22 +1,34 @@
 package ca.strendin.MSTR_Regions;
 
+import java.util.ArrayList;
+
 import org.bukkit.block.Block;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.meta.ItemMeta;
 
 public class MSTR_PlayerListener implements Listener {	
-	public MSTR_PlayerListener(MSTR_Regions mstr_Regions) {}
+	private static MSTR_Regions plugin;
+	
+	public MSTR_PlayerListener(MSTR_Regions mstr_Regions) {
+		plugin = mstr_Regions;
+	}
 
 	private boolean isEntityHostile(EntityType thisEntity) {    	
     	if (
@@ -54,7 +66,28 @@ public class MSTR_PlayerListener implements Listener {
 		return false;
 	}
 	
+	@EventHandler
+	public void onPlayerBucketEmpty(PlayerBucketEmptyEvent event) {
+		if (!CuboidRegionHandler.canBreakBlocksHere(event.getPlayer(), event.getBlockClicked())) {
+    		event.setCancelled(true);
+    		MSTR_Comms.sendPlayerError(event.getPlayer(), "Sorry, you are not allowed to do that here");
+    	}		
+	}
 	
+	/*
+	@EventHandler
+	public void onPlayerBucketFillEvent(PlayerBucketFillEvent event) {
+		if (!CuboidRegionHandler.canBreakBlocksHere(event.getPlayer(), event.getBlockClicked())) {
+    		event.setCancelled(true);
+    		MSTR_Comms.sendPlayerError(event.getPlayer(), "Sorry, you are not allowed to do that here");
+    	}			
+	}
+	*/
+	
+	@EventHandler
+	public void onBlockIgnite(BlockIgniteEvent event) {
+		
+	}
 	
 	@EventHandler        
     public void onPlayerInteract(PlayerInteractEvent event) { 
@@ -67,7 +100,7 @@ public class MSTR_PlayerListener implements Listener {
         			CuboidRegionHandler.getRegionInfoHere(player, event.getClickedBlock());
                     event.setCancelled(true);	                            
                 }        		
-        	} 
+        	}         	
         } else if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
     		// For handling the region tool
         	if (MSTR_Permissions.canManageRegions(player)) {
@@ -93,14 +126,54 @@ public class MSTR_PlayerListener implements Listener {
 	
 	@EventHandler
     public void onPlayerMoveEvent(PlayerMoveEvent event) {
-		Player player = event.getPlayer();
-		if (!CuboidRegionHandler.canMoveHere(player, event.getTo())) {
-			if (!CuboidRegionHandler.canMoveHere(player, event.getFrom())) {
-				player.teleport(player.getLocation().getWorld().getSpawnLocation());
-			} else {
-				player.teleport(event.getFrom());
+		Player player = event.getPlayer();		
+
+		ArrayList<CuboidRegion> regionsEntered = CuboidRegionHandler.getRegionsHere(event.getTo());
+		
+		if (regionsEntered != null) {
+			if (!regionsEntered.isEmpty()) {
+				/*
+				 * Check if a given player is allowed in a region
+				 */
+				if (!CuboidRegionHandler.canMoveHere(player, event.getTo(),regionsEntered)) {
+					if (!CuboidRegionHandler.canMoveHere(player, event.getFrom())) {
+						player.teleport(player.getLocation().getWorld().getSpawnLocation());
+					} else {
+						player.teleport(event.getFrom());
+					}
+					
+					MSTR_Comms.sendPlayerError(player, "Sorry, you are not allowed in this region");
+				} else {					
+					for (CuboidRegion thisRegion : regionsEntered) {						
+						/*
+						 * Check if this region is set to announce on player entry
+						 */
+						if (thisRegion.shouldAnnounceOnEnter()) {
+							if (CuboidRegionHandler.getRegionHere(event.getFrom().getBlock()) != thisRegion) {
+								MSTR_Comms.sendPlayerInfo(player, thisRegion.getAnnounceText());
+							}
+						}
+						
+						
+						
+						/*
+						 * Check if we should alert a player's entry into a region to the region owner
+						 */
+						if (thisRegion.shouldAlertOnPlayerEntry()) {
+							if (!thisRegion.isOnWhiteList(player.getName())) {
+								if (CuboidRegionHandler.getRegionHere(event.getFrom().getBlock()) != thisRegion) {
+									Player regionOwner = plugin.getServer().getPlayer(thisRegion.getOwner());						
+									if (regionOwner != null) {
+										MSTR_Comms.sendPlayerInfo(regionOwner, player.getName() + " has just entered the region \"" + thisRegion.getName() + "\"");
+										MSTR_Comms.sendPlayerInfo(regionOwner, " Entry from: " + event.getTo().getBlockX() + ", " + event.getTo().getBlockY() + ", " + event.getTo().getBlockZ() + " in world " + event.getTo().getWorld().getName());
+									}								
+								}								
+							}														
+						}
+					}
+				}
+				
 			}
-			MSTR_Comms.sendPlayerError(player, "Sorry, you are not allowed in this region");
 		}
 	}
     
@@ -139,7 +212,39 @@ public class MSTR_PlayerListener implements Listener {
     	if (!CuboidRegionHandler.canBreakBlocksHere(event.getPlayer(), event.getBlock())) {
     		event.setCancelled(true);
     		MSTR_Comms.sendPlayerError(event.getPlayer(), "Sorry, you can't place or break blocks here");
-    	}       
+    	} 
+    }
+    
+    @EventHandler
+    public void onHangingBreakByEntity(HangingBreakByEntityEvent event) {
+    	
+    	if (event.getRemover() instanceof Player) {
+    		Player player = (Player)event.getRemover();
+    		
+    		if (!CuboidRegionHandler.canBreakBlocksHere(player, event.getRemover().getLocation().getBlock())) {
+        		event.setCancelled(true);
+        		MSTR_Comms.sendPlayerError(player, "Sorry, you can't place or break blocks here");
+        	}
+    	}
+    }
+    
+    @EventHandler
+    public void onHangingPlace(HangingPlaceEvent event) {
+    	if (!CuboidRegionHandler.canBreakBlocksHere(event.getPlayer(), event.getBlock())) {
+    		event.setCancelled(true);
+    		MSTR_Comms.sendPlayerError(event.getPlayer(), "Sorry, you can't place or break blocks here");
+    	} 
+    	
+    }    
+    
+    @EventHandler
+    public void onPlayerInteractEntity(PlayerInteractEntityEvent event) {
+    	if (event.getRightClicked() instanceof ItemFrame) {
+    		if (!CuboidRegionHandler.canBreakBlocksHere(event.getPlayer(), event.getRightClicked().getLocation().getBlock())) {
+        		event.setCancelled(true);
+        		MSTR_Comms.sendPlayerError(event.getPlayer(), "Sorry, you can't place or break blocks here");
+        	} 
+    	}
     }
     
     @EventHandler

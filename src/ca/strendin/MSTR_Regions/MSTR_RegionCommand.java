@@ -48,15 +48,19 @@ public class MSTR_RegionCommand implements CommandExecutor {
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    setowner <region name> <new owner name>");
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    whitelist <region name> add|remove <player name>");                    
                     MSTR_Comms.sendPlayerInfo(requestplayer, "    flag <region name> <flag>");
-                    MSTR_Comms.sendPlayerInfo(requestplayer, "    flags: blockprotect, explosionprotect, playerentry, ");
-                    MSTR_Comms.sendPlayerInfo(requestplayer, "           enemyspawn, announce, announcetext, ");
-                    MSTR_Comms.sendPlayerInfo(requestplayer, "           containerprotect");
+                    MSTR_Comms.sendPlayerInfo(requestplayer, "    flags: blockprotect, explosionprotect, allowplayerentry, ");
+                    MSTR_Comms.sendPlayerInfo(requestplayer, "           allowenemyspawn, announce, setannouncetext, ");
+                    MSTR_Comms.sendPlayerInfo(requestplayer, "           containerprotect, alertonplayerentry");
                 }
             }
         } else {
         	MSTR_Comms.sendConsoleOnly("This command is designed for players only, sorry");
         }
         return true;
+    }
+    
+    public Player findPlayerNamed(String thisName) {
+        return plugin.getServer().getPlayer(thisName);
     }
     
     private void HandleWhiteListCommand(Player player, String[] args) {
@@ -67,13 +71,28 @@ public class MSTR_RegionCommand implements CommandExecutor {
     		
             if (specifiedRegion != null) {
             	if (subCommand.toLowerCase().equals("add")) {
-            		specifiedRegion.addToWhiteList(specifiedPlayerName);
-            		CuboidRegionHandler.saveAllRegions();
-            		MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayerName+"\" added to whitelist for region \""+specifiedRegion.getName()+"\"");
+            		Player specifiedPlayer = findPlayerNamed(specifiedPlayerName);            		
+            		if (specifiedPlayer != null) {
+	            		specifiedRegion.addToWhiteList(specifiedPlayer.getName());
+	            		CuboidRegionHandler.saveAllRegions();
+	            		MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayer.getName()+"\" added to whitelist for region \""+specifiedRegion.getName()+"\"");
+            		} else {
+            			MSTR_Comms.sendPlayerError(player, "A player with the name " + specifiedPlayerName + " was not found");
+            		}
         		} else if (subCommand.toLowerCase().equals("remove")) {
-        			specifiedRegion.removeFromWhiteList(specifiedPlayerName);
-        			CuboidRegionHandler.saveAllRegions();
-        			MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayerName+"\" removed from whitelist for region \""+specifiedRegion.getName()+"\"");
+            		Player specifiedPlayer = findPlayerNamed(specifiedPlayerName);
+            		if (specifiedPlayer != null) {
+            			if (specifiedRegion.isOnWhiteList(specifiedPlayer.getName())) {
+            				specifiedRegion.removeFromWhiteList(specifiedPlayer.getName());
+                			CuboidRegionHandler.saveAllRegions();
+                			MSTR_Comms.sendPlayerInfo(player, "\""+specifiedPlayer.getName()+"\" removed from whitelist for region \""+specifiedRegion.getName()+"\"");            				
+            			} else {
+            				MSTR_Comms.sendPlayerError(player, "\"" + specifiedPlayer.getName() + "\" is not currently on the whitelist for region \""+specifiedRegion.getName()+"\"");            				
+            			}            			    	            	
+            		} else {
+            			MSTR_Comms.sendPlayerError(player, "A player with the name " + specifiedPlayerName + " was not found");
+            		}
+        			
         		} else {
             		MSTR_Comms.sendPlayerError(player, "Usage: /msregion whitelist <region> add <playername>");
             		MSTR_Comms.sendPlayerError(player, "       /msregion whitelist <region> remove <playername>");    			
@@ -161,7 +180,7 @@ public class MSTR_RegionCommand implements CommandExecutor {
                         }                        
                         CuboidRegionHandler.saveAllRegions();
                         
-                    } else if (flagName.equals("playerentry")) {
+                    } else if (flagName.equals("allowplayerentry")) {
                         if (specifiedRegion.canPlayersEnter()) {
                             specifiedRegion.setCanPlayersEnter(false);
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will no longer allow other players to enter");
@@ -170,7 +189,7 @@ public class MSTR_RegionCommand implements CommandExecutor {
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will now allow other players to enter");                            
                         }                        
                         CuboidRegionHandler.saveAllRegions();
-                    } else if (flagName.equals("enemyspawn")) {
+                    } else if (flagName.equals("allowenemyspawn")) {
                         if (specifiedRegion.canEnemyMobsSpawnHere()) {
                             specifiedRegion.setCanEnemyMobsSpawnHere(false);
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will no longer allow enemies to spawn");
@@ -178,27 +197,37 @@ public class MSTR_RegionCommand implements CommandExecutor {
                             specifiedRegion.setCanEnemyMobsSpawnHere(true);
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will now allow enemies to spawn");                            
                         }                        
-                        CuboidRegionHandler.saveAllRegions();
+                        CuboidRegionHandler.saveAllRegions(); 
+                    } else if (flagName.equals("alertonplayerentry")) {
+                        if (specifiedRegion.shouldAlertOnPlayerEntry()) {
+                            specifiedRegion.setShouldAlertOnPlayerEntry(false);
+                            MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will no longer alert upon entry");
+                        } else {
+                            specifiedRegion.setShouldAlertOnPlayerEntry(true);
+                            MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will now alert upon entry");                            
+                        }                        
+                        CuboidRegionHandler.saveAllRegions(); 
                     } else if (flagName.equals("announce")) {
-                        if (specifiedRegion.canAnnounceOnEnter()) {
+                        if (specifiedRegion.shouldAnnounceOnEnter()) {
                             specifiedRegion.setAnnounceOnEnter(false);
+                            specifiedRegion.setAnnounceText("");
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will no longer announce upon entry");
+                            MSTR_Comms.sendPlayerInfo(player, "Announce text for region \""+regionName+"\" has been reset to defaults");
                         } else {
                             specifiedRegion.setAnnounceOnEnter(true);
                             MSTR_Comms.sendPlayerInfo(player, "Region \""+regionName+"\" will now announce upon entry");                            
                         }                        
                         CuboidRegionHandler.saveAllRegions();                        
-                    } else if (flagName.equals("announcetext")) {
+                    } else if (flagName.equals("setannouncetext")) {
                     	if (args.length > 3) {                    
                     		StringBuilder newAnnounceText = new StringBuilder();
                     		for (int x = 3; x < args.length; x++) {
                     			newAnnounceText.append(args[x]);
                     			newAnnounceText.append(" ");
-                    		}
-                    		
+                    		}                    		
                     		
                     		specifiedRegion.setAnnounceText(newAnnounceText.toString());
-                    		MSTR_Comms.sendPlayerInfo(player, "Announce text is now set to \"" + newAnnounceText.toString() + "\"");	
+                    		MSTR_Comms.sendPlayerInfo(player, "Announce text is now set to \"" + newAnnounceText.toString().trim() + "\"");	
                     		CuboidRegionHandler.saveAllRegions();
                     	} else { 
                     		specifiedRegion.setAnnounceText(null);	
@@ -227,9 +256,9 @@ public class MSTR_RegionCommand implements CommandExecutor {
                         CuboidRegionHandler.saveAllRegions();
                     } else {
                     	MSTR_Comms.sendPlayerError(player, "Flag name not valid");
-                        MSTR_Comms.sendPlayerError(player, " flags: blockprotect, explosionprotect, playerentry, ");
-                        MSTR_Comms.sendPlayerError(player, "        enemyspawn, announce, announcetext, ");
-                        MSTR_Comms.sendPlayerError(player, "        containerprotect");
+                        MSTR_Comms.sendPlayerError(player, " flags: blockprotect, explosionprotect, allowplayerentry, ");
+                        MSTR_Comms.sendPlayerError(player, "        allowenemyspawn, announce, setannouncetext, ");
+                        MSTR_Comms.sendPlayerError(player, "        containerprotect, alertonplayerentry");
                     }
                 } else {
                 	MSTR_Comms.sendPlayerError(player, "Region \""+regionName+"\" not found");

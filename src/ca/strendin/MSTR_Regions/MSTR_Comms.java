@@ -59,7 +59,7 @@ public class MSTR_Comms {
     public static void sendToOps(String message) {
         for(Player thisPlayer : org.bukkit.Bukkit.getServer().getOnlinePlayers()) {
             if (thisPlayer.isOp()) {
-                thisPlayer.sendMessage(serverMsgColor + "To ops: " + message);
+                thisPlayer.sendMessage(normalColor + "[MSTR_Regions] " +serverMsgColor + message);
             }        
         }        
     }

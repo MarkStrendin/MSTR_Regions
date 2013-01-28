@@ -16,7 +16,8 @@ public class CuboidRegion implements Serializable {
     private boolean bCanEnemiesSpawnHere;
     private boolean bCanPlayersEnter;
     private boolean bAnnounceOnEnter;
-    private boolean bAllowChestAccess;    
+    private boolean bAllowChestAccess; 
+    private boolean bAlertOwnerOnPlayerEntry;
     private int iHighX;
     private int iHighY;
     private int iHighZ;
@@ -59,11 +60,27 @@ public class CuboidRegion implements Serializable {
     }
     
     public String getOwner() {
-        return sOwner;
+    	if (sOwner != null) {
+    		return sOwner;    		
+    	} else {
+    		if (sCreator != null) {
+    			return sCreator;
+    		} else {
+    			return "Unknown";
+    		}
+    	}
     }
     
     public String getCreator() {
-    	return sCreator;
+    	if (sCreator != null) {
+    		return sCreator;    		
+    	} else {
+    		if (sOwner != null) {
+    			return sOwner;
+    		} else {
+    			return "Unknown";
+    		}
+    	}
     }
     
     public String getWorld() {
@@ -75,8 +92,10 @@ public class CuboidRegion implements Serializable {
     }
     
     public String getAnnounceText() {
-    	if (sAnnounceThisOnEnter == null) {
-    		return "You have entered the region \"" + sName + "\"";
+    	if (sAnnounceThisOnEnter == null) {    		
+    		return "Now entering region: " + sName;
+    	} else if (sAnnounceThisOnEnter.trim() == "") {
+    		return "Now entering region: " + sName;
     	} else {
     		return sAnnounceThisOnEnter;
     	}
@@ -86,21 +105,25 @@ public class CuboidRegion implements Serializable {
     	return bAllowChestAccess;
     }
     
-    public boolean isOnWhiteList(String playerName) {
-    	if (whiteList != null) {
+    public boolean isOnWhiteList(String playerName) {  	
+    	if (whiteList != null) {    		
 	    	for (String thisName : whiteList) {
 	    		if (thisName.contentEquals(playerName)) {
 	    			return true;
 	    		}
-	    	}
-	    	
+	    	}	    	
 	    	// Owner and Creator are always on the whitelist
-	    	if ((sOwner.contentEquals(playerName)) | (sCreator.contentEquals(playerName))) {
-	    		return true;
-	    	}    	
-	    	
+	    	if (sOwner != null) {
+	    		if (sOwner.contentEquals(playerName)) {
+	    			return true;
+	    		}
+	    	}	    	
+	    	if (sCreator != null) {
+	    		if (sCreator.contentEquals(playerName)) {
+	    			return true;
+	    		}
+	    	} 
     	}
-    	
     	return false;
     }
     
@@ -152,6 +175,10 @@ public class CuboidRegion implements Serializable {
     	return bCanEnemiesSpawnHere;
     }
     
+    public boolean shouldAlertOnPlayerEntry() {
+    	return bAlertOwnerOnPlayerEntry;    	
+    }
+    
     public boolean canPlayersEnter() {
     	return bCanPlayersEnter;
     }
@@ -168,7 +195,7 @@ public class CuboidRegion implements Serializable {
         return bPaintBrush_CanApplyPaint;
     }
     
-    public boolean canAnnounceOnEnter() {
+    public boolean shouldAnnounceOnEnter() {
     	return bAnnounceOnEnter;
     }
     
@@ -176,12 +203,16 @@ public class CuboidRegion implements Serializable {
         return sName;
     }
     
+    public void setShouldAlertOnPlayerEntry(boolean value) {
+    	bAlertOwnerOnPlayerEntry = value;
+    }
+    
     public void setCanPlayersOpenChests(boolean value) {
     	bAllowChestAccess = value;    	
     }
     
     public void setAnnounceText(String value) {
-    	sAnnounceThisOnEnter = value;
+    	sAnnounceThisOnEnter = value.trim();
     }
     
     public void setCanEnemyMobsSpawnHere(boolean value) {
